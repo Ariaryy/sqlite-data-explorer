@@ -3,14 +3,14 @@ import { promises as fs } from "node:fs"
 import os from "node:os"
 import path from "node:path"
 
-import Database from "better-sqlite3"
+import { openSqliteDatabase } from "@/lib/sqlite-driver"
 
 export async function createTestDatabase() {
   const directory = await fs.mkdtemp(
     path.join(os.tmpdir(), "sqlite-explorer-test-")
   )
   const dbPath = path.join(directory, `${randomUUID()}.sqlite`)
-  const db = new Database(dbPath)
+  const db = await openSqliteDatabase(dbPath)
 
   db.exec(`
     CREATE TABLE users (

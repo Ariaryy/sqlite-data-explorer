@@ -70,7 +70,7 @@ export async function handleTablesRequest(request: Request) {
       Object.fromEntries(parseRequestUrl(request).searchParams.entries())
     )
     const dbPath = await resolveSessionDbPath(params.sessionId)
-    const tables = getTables(dbPath)
+    const tables = await getTables(dbPath)
 
     return jsonSuccess<{ tables: TableInfo[] }>({ tables })
   } catch (error) {
@@ -95,7 +95,7 @@ export async function handleSchemaRequest(request: Request) {
       Object.fromEntries(parseRequestUrl(request).searchParams.entries())
     )
     const dbPath = await resolveSessionDbPath(params.sessionId)
-    const schema = getSchema(dbPath, params.tableName)
+    const schema = await getSchema(dbPath, params.tableName)
 
     return jsonSuccess<{ schema: SchemaColumn[] }>({ schema })
   } catch (error) {
@@ -118,7 +118,7 @@ export async function handleQueryRequest(request: Request) {
   try {
     const body = queryBodySchema.parse(await request.json())
     const dbPath = await resolveSessionDbPath(body.sessionId)
-    const result = executeQuery(dbPath, body.query)
+    const result = await executeQuery(dbPath, body.query)
 
     return jsonSuccess<{ result: QueryResult }>({ result })
   } catch (error) {

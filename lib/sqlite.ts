@@ -1,6 +1,8 @@
-import Database from "better-sqlite3"
-
 import { validateQuery } from "@/lib/query-validation"
+import {
+  openReadonlySqliteDatabase,
+  type SqliteDatabase,
+} from "@/lib/sqlite-driver"
 import type {
   QueryResult,
   QueryResultRow,
@@ -10,17 +12,11 @@ import type {
 
 const MAX_RESULT_ROWS = 200
 
-function withReadonlyDatabase<T>(
+async function withReadonlyDatabase<T>(
   dbPath: string,
-  operation: (db: Database.Database) => T
+  operation: (db: SqliteDatabase) => T
 ) {
-  const db = new Database(dbPath, {
-    readonly: true,
-    fileMustExist: true,
-    timeout: 5_000,
-  })
-
-  db.pragma("query_only = 1")
+  const db = await openReadonlySqliteDatabase(dbPath)
 
   try {
     return operation(db)
@@ -34,7 +30,7 @@ function quoteIdentifier(identifier: string) {
 }
 
 function normalizeValue(value: unknown) {
-  if (Buffer.isBuffer(value)) {
+  if (value instanceof Uint8Array) {
     return `[blob ${value.byteLength} bytes]`
   }
 
@@ -51,23 +47,28 @@ function normalizeRow(row: QueryResultRow) {
   )
 }
 
-export function getTables(dbPath: string): TableInfo[] {
-  return withReadonlyDatabase(dbPath, (db) =>
-    db
-      .prepare(
-        `
+export async function getTables(dbPath: string): Promise<TableInfo[]> {
+  return withReadonlyDatabase(
+    dbPath,
+    (db) =>
+      db
+        .prepare(
+          `
           SELECT name
           FROM sqlite_master
           WHERE type = 'table'
             AND name NOT LIKE 'sqlite_%'
           ORDER BY name COLLATE NOCASE
         `
-      )
-      .all() as TableInfo[]
+        )
+        .all() as TableInfo[]
   )
 }
 
-export function getSchema(dbPath: string, tableName: string): SchemaColumn[] {
+export async function getSchema(
+  dbPath: string,
+  tableName: string
+): Promise<SchemaColumn[]> {
   return withReadonlyDatabase(dbPath, (db) => {
     const table = db
       .prepare(
@@ -90,7 +91,10 @@ export function getSchema(dbPath: string, tableName: string): SchemaColumn[] {
   })
 }
 
-export function executeQuery(dbPath: string, query: string): QueryResult {
+export async function executeQuery(
+  dbPath: string,
+  query: string
+): Promise<QueryResult> {
   const validation = validateQuery(query)
 
   if (!validation.valid) {
@@ -99,12 +103,16 @@ export function executeQuery(dbPath: string, query: string): QueryResult {
 
   return withReadonlyDatabase(dbPath, (db) => {
     const statement = db.prepare(validation.normalizedQuery)
+    let columns = statement.columns()
 
-    if (!statement.reader) {
-      throw new Error("Only read-only queries are allowed.")
+    if (columns.length === 0) {
+      const previewRow = statement.get()
+
+      if (previewRow) {
+        columns = Object.keys(previewRow)
+      }
     }
 
-    const columns = statement.columns().map((column) => column.name)
     const iterator = statement.iterate() as IterableIterator<QueryResultRow>
     const rows: QueryResultRow[] = []
     let truncated = false

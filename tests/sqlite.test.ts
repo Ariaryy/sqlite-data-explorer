@@ -8,7 +8,9 @@ describe("sqlite helpers", () => {
     const fixture = await createTestDatabase()
 
     try {
-      expect(getTables(fixture.dbPath)).toEqual([{ name: "users" }])
+      await expect(getTables(fixture.dbPath)).resolves.toEqual([
+        { name: "users" },
+      ])
     } finally {
       await fixture.cleanup()
     }
@@ -18,7 +20,7 @@ describe("sqlite helpers", () => {
     const fixture = await createTestDatabase()
 
     try {
-      const schema = getSchema(fixture.dbPath, "users")
+      const schema = await getSchema(fixture.dbPath, "users")
 
       expect(schema[0]).toMatchObject({
         name: "id",
@@ -36,7 +38,7 @@ describe("sqlite helpers", () => {
     const fixture = await createTestDatabase()
 
     try {
-      const result = executeQuery(
+      const result = await executeQuery(
         fixture.dbPath,
         `
           WITH RECURSIVE numbers(value) AS (

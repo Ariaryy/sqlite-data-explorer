@@ -1,5 +1,5 @@
-import { SQLiteExplorer } from "@/components/sqlite-explorer"
+import { UploadHome } from "@/components/upload-home"
 
 export default function Page() {
-  return <SQLiteExplorer />
+  return <UploadHome />
 }
