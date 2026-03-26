@@ -104,7 +104,7 @@ function configureDatabase(db: SqliteDatabase, readonly: boolean) {
 }
 
 async function loadSqliteFactory(): Promise<SqliteFactory> {
-  if ("Bun" in globalThis) {
+  try {
     const { Database } = await importBunSqlite()
 
     return (dbPath: string, readonly = false) => {
@@ -119,6 +119,9 @@ async function loadSqliteFactory(): Promise<SqliteFactory> {
         readonly
       )
     }
+  } catch {
+    // Fall back to Node's built-in sqlite adapter when Bun's native module
+    // is unavailable in the current runtime.
   }
 
   const { DatabaseSync } = await importNodeSqlite()
