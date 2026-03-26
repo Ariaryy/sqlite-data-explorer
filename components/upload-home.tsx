@@ -71,7 +71,7 @@ export function UploadHome() {
         <section className="grid gap-5 rounded-[28px] border border-foreground/10 bg-background/[0.9] p-6 shadow-[0_24px_120px_-48px_rgba(27,35,27,0.6)] backdrop-blur sm:p-8 lg:grid-cols-[1.45fr_0.95fr]">
           <div className="space-y-5">
             <Badge className="rounded-full bg-primary/[0.12] px-3 py-1 text-[11px] tracking-[0.28em] text-primary uppercase hover:bg-primary/[0.12]">
-              SQLite field station
+              Sandboxed SQLite Data Explorer
             </Badge>
             <div className="space-y-3">
               <h1 className="max-w-3xl text-4xl font-semibold tracking-[-0.04em] sm:text-5xl">
