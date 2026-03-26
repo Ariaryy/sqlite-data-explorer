@@ -1,5 +1,3 @@
-import { Database } from "bun:sqlite"
-
 import type { QueryResultRow } from "@/lib/types"
 
 const SQLITE_BUSY_TIMEOUT_MS = 5_000
@@ -28,6 +26,31 @@ type BunStatementLike = {
   columnNames: string[]
 }
 
+type BunDatabaseLike = {
+  exec(sql: string): void
+  prepare(sql: string): BunStatementLike
+  close(): void
+}
+
+type BunDatabaseConstructor = new (
+  dbPath: string,
+  options?: { readonly?: boolean }
+) => BunDatabaseLike
+
+let bunDatabasePromise: Promise<BunDatabaseConstructor> | undefined
+
+async function loadBunDatabase() {
+  if (!("Bun" in globalThis)) {
+    throw new Error("SQLite access requires the Bun runtime.")
+  }
+
+  bunDatabasePromise ??= import("bun:sqlite").then(
+    (module) => module.Database as BunDatabaseConstructor
+  )
+
+  return bunDatabasePromise
+}
+
 function wrapStatement(statement: BunStatementLike): SqliteStatement {
   return {
     all: (...params) => statement.all(...params),
@@ -52,8 +75,9 @@ function configureDatabase(db: SqliteDatabase, readonly: boolean) {
   return db
 }
 
-function openDatabase(dbPath: string, readonly = false): SqliteDatabase {
-  const db = new Database(dbPath, readonly ? { readonly: true } : undefined)
+async function openDatabase(dbPath: string, readonly = false): Promise<SqliteDatabase> {
+  const BunDatabase = await loadBunDatabase()
+  const db = new BunDatabase(dbPath, readonly ? { readonly: true } : undefined)
 
   return configureDatabase(
     {
